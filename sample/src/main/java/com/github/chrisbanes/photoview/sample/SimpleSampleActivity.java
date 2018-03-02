@@ -34,7 +34,9 @@ import com.github.chrisbanes.photoview.OnMatrixChangedListener;
 import com.github.chrisbanes.photoview.OnPhotoTapListener;
 import com.github.chrisbanes.photoview.OnSingleFlingListener;
 import com.github.chrisbanes.photoview.PhotoView;
+import com.github.chrisbanes.photoview.PhotoViewAttacher;
 
+import java.util.Locale;
 import java.util.Random;
 
 
@@ -70,6 +72,12 @@ public class SimpleSampleActivity extends AppCompatActivity {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
                 switch (item.getItemId()) {
+                    case R.id.menu_pan_limit_center_toggle:
+                        mPhotoView.setPanLimit(PhotoViewAttacher.PAN_LIMIT_CENTER);
+                        return true;
+                    case R.id.menu_pan_limit_inside_toggle:
+                        mPhotoView.setPanLimit(PhotoViewAttacher.PAN_LIMIT_INSIDE);
+                        return true;
                     case R.id.menu_zoom_toggle:
                         mPhotoView.setZoomable(!mPhotoView.isZoomEnabled());
                         item.setTitle(mPhotoView.isZoomEnabled() ? R.string.menu_zoom_disable : R.string.menu_zoom_enable);
@@ -112,7 +120,7 @@ public class SimpleSampleActivity extends AppCompatActivity {
                         float randomScale = minScale + (r.nextFloat() * (maxScale - minScale));
                         mPhotoView.setScale(randomScale, item.getItemId() == R.id.menu_scale_random_animate);
 
-                        showToast(String.format(SCALE_TOAST_STRING, randomScale));
+                        showToast(String.format(Locale.getDefault(), SCALE_TOAST_STRING, randomScale));
 
                         return true;
                     case R.id.menu_matrix_restore:
@@ -129,6 +137,7 @@ public class SimpleSampleActivity extends AppCompatActivity {
                 return false;
             }
         });
+
         mPhotoView = findViewById(R.id.iv_photo);
         mCurrMatrixTv = findViewById(R.id.tv_current_matrix);
 
@@ -148,7 +157,7 @@ public class SimpleSampleActivity extends AppCompatActivity {
             float xPercentage = x * 100f;
             float yPercentage = y * 100f;
 
-            showToast(String.format(PHOTO_TAP_TOAST_STRING, xPercentage, yPercentage, view == null ? 0 : view.getId()));
+            showToast(String.format(Locale.getDefault(), PHOTO_TAP_TOAST_STRING, xPercentage, yPercentage, view == null ? 0 : view.getId()));
         }
     }
 

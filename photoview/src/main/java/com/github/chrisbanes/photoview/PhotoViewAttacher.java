@@ -21,6 +21,7 @@ import android.graphics.Matrix.ScaleToFit;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.support.v4.view.MotionEventCompat;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -40,15 +41,18 @@ import android.widget.OverScroller;
 public class PhotoViewAttacher implements View.OnTouchListener,
         View.OnLayoutChangeListener {
 
-    private static float DEFAULT_MAX_SCALE = 3.0f;
-    private static float DEFAULT_MID_SCALE = 1.75f;
-    private static float DEFAULT_MIN_SCALE = 1.0f;
-    private static int DEFAULT_ZOOM_DURATION = 200;
+    public static final int PAN_LIMIT_CENTER = 1;
+    public static final int PAN_LIMIT_INSIDE = 2;
+    private int panLimit = PAN_LIMIT_INSIDE;
 
     private static final int EDGE_NONE = -1;
     private static final int EDGE_LEFT = 0;
     private static final int EDGE_RIGHT = 1;
     private static final int EDGE_BOTH = 2;
+    private static float DEFAULT_MAX_SCALE = 3.0f;
+    private static float DEFAULT_MID_SCALE = 1.75f;
+    private static float DEFAULT_MIN_SCALE = 1.0f;
+    private static int DEFAULT_ZOOM_DURATION = 200;
     private static int SINGLE_TOUCH = 1;
 
     private Interpolator mInterpolator = new AccelerateDecelerateInterpolator();
@@ -56,10 +60,8 @@ public class PhotoViewAttacher implements View.OnTouchListener,
     private float mMinScale = DEFAULT_MIN_SCALE;
     private float mMidScale = DEFAULT_MID_SCALE;
     private float mMaxScale = DEFAULT_MAX_SCALE;
-
     private boolean mAllowParentInterceptOnEdge = true;
     private boolean mBlockParentIntercept = false;
-
     private ImageView mImageView;
 
     // Gesture Detectors
@@ -131,10 +133,12 @@ public class PhotoViewAttacher implements View.OnTouchListener,
 
         @Override
         public void onFling(float startX, float startY, float velocityX, float velocityY) {
-            mCurrentFlingRunnable = new FlingRunnable(mImageView.getContext());
-            mCurrentFlingRunnable.fling(getImageViewWidth(mImageView),
-                    getImageViewHeight(mImageView), (int) velocityX, (int) velocityY);
-            mImageView.post(mCurrentFlingRunnable);
+            if (panLimit != PAN_LIMIT_CENTER) {
+                mCurrentFlingRunnable = new FlingRunnable(mImageView.getContext());
+                mCurrentFlingRunnable.fling(getImageViewWidth(mImageView),
+                        getImageViewHeight(mImageView), (int) velocityX, (int) velocityY);
+                mImageView.post(mCurrentFlingRunnable);
+            }
         }
 
         @Override
@@ -148,6 +152,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
             }
         }
     };
+    private float initScale;
 
     public PhotoViewAttacher(ImageView imageView) {
         mImageView = imageView;
@@ -276,6 +281,7 @@ public class PhotoViewAttacher implements View.OnTouchListener,
     }
 
     public RectF getDisplayRect() {
+
         checkMatrixBounds();
         return getDisplayRect(getDrawMatrix());
     }
@@ -316,20 +322,54 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         return mMinScale;
     }
 
+    public void setMinimumScale(float minimumScale) {
+        Util.checkZoomLevels(minimumScale, mMidScale, mMaxScale);
+        mMinScale = minimumScale;
+    }
+
+    public void setInitScale(float initScale) {
+        this.initScale = initScale;
+    }
+
+    public float getInitScale() {
+        return initScale;
+    }
+
     public float getMediumScale() {
         return mMidScale;
+    }
+
+    public void setMediumScale(float mediumScale) {
+        Util.checkZoomLevels(mMinScale, mediumScale, mMaxScale);
+        mMidScale = mediumScale;
     }
 
     public float getMaximumScale() {
         return mMaxScale;
     }
 
+    public void setMaximumScale(float maximumScale) {
+        Util.checkZoomLevels(mMinScale, mMidScale, maximumScale);
+        mMaxScale = maximumScale;
+    }
+
     public float getScale() {
         return (float) Math.sqrt((float) Math.pow(getValue(mSuppMatrix, Matrix.MSCALE_X), 2) + (float) Math.pow(getValue(mSuppMatrix, Matrix.MSKEW_Y), 2));
     }
 
+    public void setScale(float scale) {
+        setScale(scale, false);
+    }
+
     public ScaleType getScaleType() {
         return mScaleType;
+    }
+
+    public void setScaleType(ScaleType scaleType) {
+        if (Util.isSupportedScaleType(scaleType) && scaleType != mScaleType) {
+            mScaleType = scaleType;
+            update();
+        }
     }
 
     @Override
@@ -408,21 +448,6 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         mAllowParentInterceptOnEdge = allow;
     }
 
-    public void setMinimumScale(float minimumScale) {
-        Util.checkZoomLevels(minimumScale, mMidScale, mMaxScale);
-        mMinScale = minimumScale;
-    }
-
-    public void setMediumScale(float mediumScale) {
-        Util.checkZoomLevels(mMinScale, mediumScale, mMaxScale);
-        mMidScale = mediumScale;
-    }
-
-    public void setMaximumScale(float maximumScale) {
-        Util.checkZoomLevels(mMinScale, mMidScale, maximumScale);
-        mMaxScale = maximumScale;
-    }
-
     public void setScaleLevels(float minimumScale, float mediumScale, float maximumScale) {
         Util.checkZoomLevels(minimumScale, mediumScale, maximumScale);
         mMinScale = minimumScale;
@@ -458,10 +483,6 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         mOnViewDragListener = listener;
     }
 
-    public void setScale(float scale) {
-        setScale(scale, false);
-    }
-
     public void setScale(float scale, boolean animate) {
         setScale(scale,
                 (mImageView.getRight()) / 2,
@@ -492,13 +513,6 @@ public class PhotoViewAttacher implements View.OnTouchListener,
      */
     public void setZoomInterpolator(Interpolator interpolator) {
         mInterpolator = interpolator;
-    }
-
-    public void setScaleType(ScaleType scaleType) {
-        if (Util.isSupportedScaleType(scaleType) && scaleType != mScaleType) {
-            mScaleType = scaleType;
-            update();
-        }
     }
 
     public boolean isZoomable() {
@@ -679,62 +693,95 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         resetMatrix();
     }
 
-    private boolean checkMatrixBounds() {
+    private boolean checkPanLimitMatrixBounds() {
 
         final RectF rect = getDisplayRect(getDrawMatrix());
         if (rect == null) {
             return false;
         }
-
         final float height = rect.height(), width = rect.width();
         float deltaX = 0, deltaY = 0;
 
         final int viewHeight = getImageViewHeight(mImageView);
-        if (height <= viewHeight) {
-            switch (mScaleType) {
-                case FIT_START:
-                    deltaY = -rect.top;
-                    break;
-                case FIT_END:
-                    deltaY = viewHeight - height - rect.top;
-                    break;
-                default:
-                    deltaY = (viewHeight - height) / 2 - rect.top;
-                    break;
-            }
-        } else if (rect.top > 0) {
-            deltaY = -rect.top;
-        } else if (rect.bottom < viewHeight) {
-            deltaY = viewHeight - rect.bottom;
+        if (height / 2 > viewHeight - rect.top) {
+            deltaY = viewHeight - height / 2 - rect.top;
+        } else if (height / 2 > rect.bottom) {
+            deltaY = height / 2 - rect.bottom;
         }
-
         final int viewWidth = getImageViewWidth(mImageView);
-        if (width <= viewWidth) {
-            switch (mScaleType) {
-                case FIT_START:
-                    deltaX = -rect.left;
-                    break;
-                case FIT_END:
-                    deltaX = viewWidth - width - rect.left;
-                    break;
-                default:
-                    deltaX = (viewWidth - width) / 2 - rect.left;
-                    break;
-            }
-            mScrollEdge = EDGE_BOTH;
-        } else if (rect.left > 0) {
+        if (width / 2 > rect.right) {
             mScrollEdge = EDGE_LEFT;
-            deltaX = -rect.left;
-        } else if (rect.right < viewWidth) {
-            deltaX = viewWidth - rect.right;
+            deltaX = width / 2 - rect.right;
+        } else if (width / 2 > viewWidth - rect.left) {
+            deltaX = viewWidth - rect.left - width / 2;
             mScrollEdge = EDGE_RIGHT;
         } else {
             mScrollEdge = EDGE_NONE;
         }
-
         // Finally actually translate the matrix
         mSuppMatrix.postTranslate(deltaX, deltaY);
         return true;
+    }
+
+    private boolean checkMatrixBounds() {
+
+        if (panLimit != PAN_LIMIT_CENTER) {
+
+            final RectF rect = getDisplayRect(getDrawMatrix());
+            if (rect == null) {
+                return false;
+            }
+
+            final float height = rect.height(), width = rect.width();
+            float deltaX = 0, deltaY = 0;
+
+            final int viewHeight = getImageViewHeight(mImageView);
+            if (height <= viewHeight) {
+                switch (mScaleType) {
+                    case FIT_START:
+                        deltaY = -rect.top;
+                        break;
+                    case FIT_END:
+                        deltaY = viewHeight - height - rect.top;
+                        break;
+                    default:
+                        deltaY = (viewHeight - height) / 2 - rect.top;
+                        break;
+                }
+            } else if (rect.top > 0) {
+                deltaY = -rect.top;
+            } else if (rect.bottom < viewHeight) {
+                deltaY = viewHeight - rect.bottom;
+            }
+
+            final int viewWidth = getImageViewWidth(mImageView);
+            if (width <= viewWidth) {
+                switch (mScaleType) {
+                    case FIT_START:
+                        deltaX = -rect.left;
+                        break;
+                    case FIT_END:
+                        deltaX = viewWidth - width - rect.left;
+                        break;
+                    default:
+                        deltaX = (viewWidth - width) / 2 - rect.left;
+                        break;
+                }
+                mScrollEdge = EDGE_BOTH;
+            } else if (rect.left > 0) {
+                mScrollEdge = EDGE_LEFT;
+                deltaX = -rect.left;
+            } else if (rect.right < viewWidth) {
+                deltaX = viewWidth - rect.right;
+                mScrollEdge = EDGE_RIGHT;
+            } else {
+                mScrollEdge = EDGE_NONE;
+            }
+
+            // Finally actually translate the matrix
+            mSuppMatrix.postTranslate(deltaX, deltaY);
+            return true;
+        } else return checkPanLimitMatrixBounds();
     }
 
     private int getImageViewWidth(ImageView imageView) {
@@ -750,6 +797,15 @@ public class PhotoViewAttacher implements View.OnTouchListener,
             mCurrentFlingRunnable.cancelFling();
             mCurrentFlingRunnable = null;
         }
+    }
+
+    public int getPanLimit() {
+        return panLimit;
+    }
+
+    public void setPanLimit(int panLimit) {
+        this.panLimit = panLimit;
+        update();
     }
 
     private class AnimatedZoomRunnable implements Runnable {

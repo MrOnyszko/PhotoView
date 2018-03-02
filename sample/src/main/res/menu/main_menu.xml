@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-      xmlns:tools="http://schemas.android.com/tools"
-      tools:ignore="UnusedAttribute">
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UnusedAttribute">
 
+    <item
+        android:id="@+id/menu_pan_limit_center_toggle"
+        android:title="@string/menu_pan_limit_center_toggle"/>
+    <item
+        android:id="@+id/menu_pan_limit_inside_toggle"
+        android:title="@string/menu_pan_limit_inside_toggle"/>
     <item
         android:id="@+id/menu_zoom_toggle"
         android:title="@string/menu_zoom_disable"/>

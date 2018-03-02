@@ -263,4 +263,13 @@ public class PhotoView extends ImageView {
     public void setOnSingleFlingListener(OnSingleFlingListener onSingleFlingListener) {
         attacher.setOnSingleFlingListener(onSingleFlingListener);
     }
+
+    public int getPanLimit() {
+        return attacher.getPanLimit();
+    }
+
+    public void setPanLimit(int panLimit) {
+        attacher.setPanLimit(panLimit);
+    }
+
 }
