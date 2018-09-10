@@ -699,21 +699,26 @@ public class PhotoViewAttacher implements View.OnTouchListener,
         if (rect == null) {
             return false;
         }
-        final float height = rect.height(), width = rect.width();
+
         float deltaX = 0, deltaY = 0;
 
         final int viewHeight = getImageViewHeight(mImageView);
-        if (height / 2 > viewHeight - rect.top) {
-            deltaY = viewHeight - height / 2 - rect.top;
-        } else if (height / 2 > rect.bottom) {
-            deltaY = height / 2 - rect.bottom;
+        if (rect.top > viewHeight / 2) {
+            //bottom
+            deltaY = viewHeight / 2 - rect.top;
+        } else if (rect.bottom < viewHeight / 2) {
+            //top
+            deltaY = viewHeight / 2 - rect.bottom;
         }
+
         final int viewWidth = getImageViewWidth(mImageView);
-        if (width / 2 > rect.right) {
+        if (rect.right < viewWidth / 2) {
+            //left
+            deltaX = viewWidth / 2 - rect.right;
             mScrollEdge = EDGE_LEFT;
-            deltaX = width / 2 - rect.right;
-        } else if (width / 2 > viewWidth - rect.left) {
-            deltaX = viewWidth - rect.left - width / 2;
+        } else if (rect.left > viewWidth / 2) {
+            //right
+            deltaX = viewWidth / 2 - rect.left;
             mScrollEdge = EDGE_RIGHT;
         } else {
             mScrollEdge = EDGE_NONE;
